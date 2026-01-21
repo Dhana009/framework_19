@@ -529,270 +529,240 @@ def test_api_client():
 
 ---
 
-## 12. MULTIPLE BROWSER TESTING
+## 12. MULTIPLE BROWSER TESTING (FRAMEWORK UPDATED)
 
-### Why Test Multiple Browsers?
-- Different browsers render differently
-- Test cross-browser compatibility
-- Catch browser-specific bugs
+### Framework Update - What Was Added
 
-### Method 1: Parametrize Test for Multiple Browsers
+**Files Updated:**
+- ✅ `fixtures/browser_fixtures.py` - Added `multi_browser` fixture
+- ✅ `fixtures/context_fixtures.py` - Added `multi_browser_context` and `multi_browser_page` fixtures
+- ✅ New file: `tests/multi_browser_example.py` - Practical examples
+- ✅ New file: `MULTI_BROWSER_QUICK_REFERENCE.py` - Quick reference
+
+---
+
+### The Easiest Way - Use multi_browser_page
 
 ```python
-# conftest.py - Add this fixture
-import pytest
-
-@pytest.fixture(params=["chromium", "firefox", "webkit"])
-def multi_browser(request, playwright_instance):
+def test_login_all_browsers(multi_browser_page):
     """
-    Parametrized fixture that runs test with each browser
+    This test runs 3 times automatically:
+    - Once on Chromium
+    - Once on Firefox  
+    - Once on WebKit
     """
-    browser_name = request.param
-    
-    if browser_name == "firefox":
-        browser = playwright_instance.firefox.launch(headless=False)
-    elif browser_name == "webkit":
-        browser = playwright_instance.webkit.launch(headless=False)
-    else:
-        browser = playwright_instance.chromium.launch(headless=False)
-    
-    yield browser
-    browser.close()
+    multi_browser_page.goto("https://app.com/login")
+    multi_browser_page.fill("input#username", "john")
+    multi_browser_page.fill("input#password", "pass123")
+    multi_browser_page.click("button[type='submit']")
+    assert "Dashboard" in multi_browser_page.title()
 ```
 
-### Usage: Run Same Test on All Browsers
+**That's it!** Just change `page` to `multi_browser_page` and it runs on all 3 browsers automatically.
+
+---
+
+### Three Fixture Options
+
+#### Option 1: multi_browser_page (EASIEST)
 ```python
-def test_login_on_all_browsers(multi_browser):
-    """This test runs 3 times: once for each browser"""
-    context = multi_browser.new_context()
-    page = context.new_page()
-    
-    page.goto("https://app.com/login")
-    page.fill("input#username", "john")
-    page.fill("input#password", "pass123")
-    page.click("button[type='submit']")
-    
-    assert "Dashboard" in page.title()
+def test_something(multi_browser_page):
+    multi_browser_page.goto("https://example.com")
+    assert "Example" in multi_browser_page.title()
+```
+- Best for quick tests
+- Pre-configured page ready to use
+- Just like the regular `page` fixture but runs 3X
+
+#### Option 2: multi_browser_context (MORE CONTROL)
+```python
+def test_something(multi_browser_context):
+    page = multi_browser_context.new_page()
+    page.goto("https://example.com")
+    assert "Example" in page.title()
     page.close()
-    context.close()
 ```
+- When you need to create multiple pages in one test
+- Full access to context options
 
-### Run Command (Runs Test 3 Times - Once Per Browser)
-```bash
-pytest test_login.py::test_login_on_all_browsers -v
-# Output:
-# test_login.py::test_login_on_all_browsers[chromium] PASSED
-# test_login.py::test_login_on_all_browsers[firefox] PASSED
-# test_login.py::test_login_on_all_browsers[webkit] PASSED
-```
-
----
-
-### Method 2: Run All Tests on Specific Browser via CLI
-
-```bash
-# Run all tests on Firefox
-pytest --browser-type=firefox
-
-# Run all tests on WebKit
-pytest --browser-type=webkit
-
-# Run all tests on Chromium (default)
-pytest --browser-type=chromium
-```
-
----
-
-### Method 3: Create Fixture for Each Browser Separately
-
+#### Option 3: multi_browser (MOST CONTROL)
 ```python
-# conftest.py
-import pytest
-from playwright.sync_api import sync_playwright
-
-@pytest.fixture(scope="session")
-def chromium_browser():
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=False)
-    yield browser
-    browser.close()
-    playwright.stop()
-
-@pytest.fixture(scope="session")
-def firefox_browser():
-    playwright = sync_playwright().start()
-    browser = playwright.firefox.launch(headless=False)
-    yield browser
-    browser.close()
-    playwright.stop()
-
-@pytest.fixture(scope="session")
-def webkit_browser():
-    playwright = sync_playwright().start()
-    browser = playwright.webkit.launch(headless=False)
-    yield browser
-    browser.close()
-    playwright.stop()
-```
-
-### Usage: Choose Browser Per Test
-```python
-def test_login_chromium(chromium_browser):
-    context = chromium_browser.new_context()
-    page = context.new_page()
-    page.goto("https://app.com/login")
-    # ... test code ...
-
-def test_login_firefox(firefox_browser):
-    context = firefox_browser.new_context()
-    page = context.new_page()
-    page.goto("https://app.com/login")
-    # ... test code ...
-
-def test_login_webkit(webkit_browser):
-    context = webkit_browser.new_context()
-    page = context.new_page()
-    page.goto("https://app.com/login")
-    # ... test code ...
-```
-
----
-
-### Method 4: Browser-Specific Test Markers
-
-```python
-# conftest.py
-import pytest
-
-def pytest_collection_modifyitems(config, items):
-    for item in items:
-        # Mark specific tests for specific browsers
-        if "test_modern_css" in item.nodeid:
-            item.add_marker(pytest.mark.chromium_only)
-        
-        if "test_legacy_support" in item.nodeid:
-            item.add_marker(pytest.mark.firefox_only)
-```
-
-### Usage: Run Only Chromium Tests
-```bash
-pytest -m chromium_only
-```
-
----
-
-### Method 5: Dynamic Browser Selection
-
-```python
-# conftest.py
-import pytest
-from playwright.sync_api import sync_playwright
-
-BROWSER_TYPES = {
-    "chromium": lambda pw: pw.chromium.launch(headless=False),
-    "firefox": lambda pw: pw.firefox.launch(headless=False),
-    "webkit": lambda pw: pw.webkit.launch(headless=False),
-}
-
-@pytest.fixture(scope="session")
-def dynamic_browser(request):
-    """
-    Choose browser dynamically from CLI:
-    pytest --browser=chromium
-    pytest --browser=firefox
-    pytest --browser=webkit
-    """
-    browser_type = request.config.getoption("--browser", default="chromium")
-    
-    playwright = sync_playwright().start()
-    browser_launcher = BROWSER_TYPES.get(browser_type)
-    browser = browser_launcher(playwright)
-    
-    yield browser
-    
-    browser.close()
-    playwright.stop()
-
-def pytest_addoption(parser):
-    parser.addoption(
-        "--browser",
-        action="store",
-        default="chromium",
-        help="Choose browser: chromium, firefox, webkit"
-    )
-```
-
----
-
-### QUICK ANSWER FOR INTERVIEW
-
-**Q: "How do you test on multiple browsers?"**
-
-**A:**
-> "There are multiple approaches:
->
-> **Approach 1 - Parametrization:**
-> Use pytest parametrize with a fixture. Same test runs on all browsers automatically.
->
-> **Approach 2 - CLI Option:**
-> Use `--browser-type=firefox` to run all tests on Firefox
->
-> **Approach 3 - Separate Fixtures:**
-> Create chromium_browser, firefox_browser, webkit_browser fixtures. Each test chooses which one to use.
->
-> **Approach 4 - Markers:**
-> Use pytest markers like `@pytest.mark.firefox_only` to run specific tests only on Firefox
->
-> **Approach 5 - Dynamic Selection:**
-> Accept browser type as CLI argument and launch dynamically
->
-> I'd recommend Approach 1 (parametrization) because it's clean and ensures all tests run on all browsers without duplicating code."
-
----
-
-### Interview Code Snippet - Multiple Browsers
-
-```python
-import pytest
-from playwright.sync_api import sync_playwright
-
-@pytest.fixture(params=["chromium", "firefox", "webkit"])
-def multi_browser(request):
-    """Test on all 3 browsers automatically"""
-    pw = sync_playwright().start()
-    
-    if request.param == "firefox":
-        browser = pw.firefox.launch(headless=False)
-    elif request.param == "webkit":
-        browser = pw.webkit.launch(headless=False)
-    else:
-        browser = pw.chromium.launch(headless=False)
-    
-    yield browser
-    browser.close()
-    pw.stop()
-
-
-def test_homepage(multi_browser):
-    """Runs 3 times: chromium, firefox, webkit"""
-    context = multi_browser.new_context()
+def test_something(multi_browser):
+    context = multi_browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
     page.goto("https://example.com")
     assert "Example" in page.title()
     page.close()
     context.close()
 ```
+- When you need custom viewport, options
+- Most flexibility
 
-**Run it:**
+---
+
+### Running Tests
+
+#### Run All Tests on All Browsers
 ```bash
-pytest test_multi_browser.py -v
+pytest tests/ -v
 ```
-
 **Output:**
 ```
-test_multi_browser.py::test_homepage[chromium] PASSED
-test_multi_browser.py::test_homepage[firefox] PASSED
-test_multi_browser.py::test_homepage[webkit] PASSED
+test_login.py::test_login[chromium] PASSED
+test_login.py::test_login[firefox] PASSED
+test_login.py::test_login[webkit] PASSED
+```
+
+#### Run Only on Specific Browser
+```bash
+pytest --browser-type=chromium tests/ -v
+pytest --browser-type=firefox tests/ -v
+pytest --browser-type=webkit tests/ -v
+```
+
+#### Run Specific Test File
+```bash
+pytest tests/sanity/test_login.py -v
+```
+
+#### Run in Headless Mode
+```bash
+pytest --headless tests/ -v
+```
+
+---
+
+### How It Works - Behind the Scenes
+
+```
+When you write:
+    def test_login(multi_browser_page):
+
+Pytest sees:
+    @pytest.fixture(params=["chromium", "firefox", "webkit"])
+    def multi_browser(request):
+        ...
+
+And automatically runs your test 3 times:
+    test_login[chromium] → launches Firefox, runs test
+    test_login[firefox] → launches Firefox, runs test
+    test_login[webkit] → launches WebKit, runs test
+```
+
+---
+
+### Real Examples from tests/multi_browser_example.py
+
+```python
+# Example 1: Simple cross-browser test
+def test_page_title_on_all_browsers(multi_browser_page):
+    assert multi_browser_page is not None
+
+# Example 2: Navigation test
+def test_navigation_on_all_browsers(multi_browser_page):
+    multi_browser_page.goto("https://example.com")
+    title = multi_browser_page.title()
+    assert "Example" in title
+
+# Example 3: Form test
+def test_form_fill_on_all_browsers(multi_browser_page):
+    multi_browser_page.goto("https://app.com/form")
+    multi_browser_page.fill("input#username", "testuser")
+    multi_browser_page.click("button[type='submit']")
+
+# Example 4: Multiple pages in same browser
+def test_multiple_pages_same_browser(multi_browser):
+    context1 = multi_browser.new_context()
+    page1 = context1.new_page()
+    page1.goto("https://example.com")
+    
+    context2 = multi_browser.new_context()
+    page2 = context2.new_page()
+    page2.goto("https://google.com")
+    
+    page1.close()
+    context1.close()
+    page2.close()
+    context2.close()
+```
+
+---
+
+### Interview Answer for Multi-Browser Testing
+
+> *"I updated the framework to support cross-browser testing.*
+>
+> *Here's what I added:*
+>
+> *1. `multi_browser` fixture in browser_fixtures.py with parametrization for chromium, firefox, webkit*
+>
+> *2. Helper fixtures:*
+> *   - `multi_browser_page` - for quick tests*
+> *   - `multi_browser_context` - for tests needing multiple pages*
+>
+> *3. Usage is simple: just use `multi_browser_page` instead of `page`*
+>
+> *4. When you run `pytest tests/ -v`, each test automatically runs 3 times - once per browser*
+>
+> *5. Benefits:*
+> *   - Write test once, runs on all 3 browsers*
+> *   - No code duplication*
+> *   - Each browser is isolated, no interference*
+> *   - Can still run single browser with `--browser-type=chromium`*
+>
+> *Example:*
+> ```python
+> def test_login(multi_browser_page):
+>     multi_browser_page.goto('/login')
+>     assert 'Login' in multi_browser_page.title()
+> ```
+>
+> *This runs 3 times automatically.*
+>
+> *The implementation uses pytest's parametrize feature which runs the fixture with different values, triggering the test execution multiple times."*
+
+---
+
+### Quick Comparison: Before vs After
+
+**BEFORE (Single Browser):**
+```python
+def test_login(page):
+    page.goto("/login")
+    assert "Login" in page.title()
+```
+- Runs 1 time (on Chromium)
+
+**AFTER (Multi-Browser):**
+```python
+def test_login(multi_browser_page):
+    multi_browser_page.goto("/login")
+    assert "Login" in multi_browser_page.title()
+```
+- Runs 3 times (Chromium, Firefox, WebKit)
+- Only changed `page` to `multi_browser_page`!
+
+---
+
+### Fixture Dependency Chain (UPDATED)
+
+```
+config
+  ↓
+playwright_instance
+  ↓
+browser_manager
+  ├─→ browser (single browser)
+  └─→ multi_browser (parametrized for all 3 browsers)
+       ├─ [chromium]
+       ├─ [firefox]
+       └─ [webkit]
+  ↓
+For single browser:
+context_manager → context → page
+
+For multi-browser:
+multi_browser_context → multi_browser_page
 ```
 
 ---

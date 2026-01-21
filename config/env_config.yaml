@@ -1,0 +1,39 @@
+# Environment-specific configuration
+# Actual credentials should be set via environment variables
+
+qa:
+  ui:
+    base_url: "https://qa.example.com"
+  api:
+    base_url: "https://api-qa.example.com"
+  credentials:
+    # These are placeholders - actual values from environment variables
+    username: "${QA_USERNAME}"
+    password: "${QA_PASSWORD}"
+  features:
+    enable_feature_x: true
+    enable_feature_y: false
+
+staging:
+  ui:
+    base_url: "https://staging.example.com"
+  api:
+    base_url: "https://api-staging.example.com"
+  credentials:
+    username: "${STAGING_USERNAME}"
+    password: "${STAGING_PASSWORD}"
+  features:
+    enable_feature_x: true
+    enable_feature_y: true
+
+production:
+  ui:
+    base_url: "https://www.example.com"
+  api:
+    base_url: "https://api.example.com"
+  credentials:
+    username: "${PROD_USERNAME}"
+    password: "${PROD_PASSWORD}"
+  features:
+    enable_feature_x: true
+    enable_feature_y: true

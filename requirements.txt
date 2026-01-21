@@ -1,0 +1,23 @@
+# Python dependencies for automation framework
+
+# Core testing framework
+pytest==7.4.3
+pytest-html==4.1.1
+pytest-xdist==3.5.0  # Parallel execution
+pytest-timeout==2.2.0
+
+# Playwright
+playwright==1.40.0
+
+# HTTP client for API testing
+requests==2.31.0
+urllib3==2.1.0
+
+# Data handling
+pyyaml==6.0.1
+
+# Reporting
+allure-pytest==2.13.2
+
+# Utilities
+python-dotenv==1.0.0  # For .env file support

@@ -1,0 +1,21 @@
+# Test Framework Configuration
+
+browser:
+  type: chromium  # chromium, firefox, webkit
+  headless: false
+  slowmo: 500     # delay between actions (ms)
+  viewport:
+    width: 1920
+    height: 1080
+
+api:
+  base_url: https://api.example.com
+  timeout: 30
+
+ui:
+  base_url: https://app.example.com
+  wait_timeout: 10000
+
+credentials:
+  username: testuser
+  password: testpass123
